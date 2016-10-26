@@ -1,35 +1,56 @@
+---
+title: "Impact due to Sever Weather Events"
+author: "Hector Hernandez"
+date: "October 25, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Public economic and healh affectation in the U.S. by Sever Weather
+##Synopsis
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+##Data Processing
+The data for this analysis was obtained from the [Coursera Website](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) for this assignment
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
 library(dplyr)
 library(ggplot2)
 library(lubridate)
 library(car)
 
 working.directory <- "C:/coursera/RepData_PeerAssessment2"
-
-getExp <- function(e) {
-  if (e %in% c("h", "H"))
-    return(2)
-  else if (e %in% c("k", "K"))
-    return(3)
-  else if (e %in% c("m", "M"))
-    return(6)
-  else if (e %in% c("b", "B"))
-    return(9)
-  else if (!is.na(as.numeric(e))) 
-    return(as.numeric(e))
-  else if (e %in% c("", "-", "?", "+"))
-    return(0)
-  else {
-    stop("Invalid value.")
-  }
-}
-
-
 URL <- "http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 destfile <- "stormData.csv.bz2"
-download.file(URL, destfile)
+
+
+setwd(working.directory)
+
+```
+
+
+
+```{r echo = TRUE, cache=TRUE}
+
+if (!file.exists(destfile)) download.file(URL, destfile)
 
 df <- tbl_df(read.csv(destfile, header = TRUE, na.strings = "NA" )) 
 
+```
+
+We observe we have 902,297 observations and 37 variables
+```{r echo = TRUE}
+str(df)
+
+```
+
+
+In order to continue with out analysis we need to transform the variable BGN_DATE to a "Date" format
+```{r echo=TRUE}
 from <- mdy_hms("01-01-2001 0:00:00")
 to <- mdy_hms("12-01-2011 0:00:00")
 
@@ -42,9 +63,14 @@ health.impact <- group_by(required.data, EVTYPE) %>%
   filter(fatalities > 0 | injuries > 0)
 
 casualties <- arrange(health.impact, desc(fatalities))
+```
 
+##Results
+### Q1:Which weather events are most harmful with respect to population health?
 
-#ggplot(casualties[1:10,], aes(x = factor(injuries), y = EVTYPE)) + geom_bar(stat = "identity")
+We will concentrate on two particular variables, FATALITIES and INJURIES. First, We shall group the data based on the type of the event (EVTYPE), and call the resulting R object as casualties.
+
+```{r echo=TRUE}
 ggplot(casualties[1:5,], aes(x = factor(EVTYPE), y = fatalities)) + 
   geom_bar(stat = "identity") + 
   guides(fill = FALSE) + xlab("Weather Event") + ylab("Number of Fatalities") +
@@ -56,8 +82,10 @@ ggplot(casualties[1:5,], aes(x = factor(EVTYPE), y = injuries)) +
   guides(fill = FALSE) + xlab("Weather Event") + ylab("Number of Injuries") +
   ggtitle("Injuries due to Severe Weather Events")
 
+```
 
-
+### Q2: Which weather events involve the greatest economic consequences?
+```{r echo=TRUE}
 required.data$PROPDMG.B <- recode(as.character(required.data$PROPDMGEXP), "'K'=1e-6; 'M'=1e-3;'B'=1;''=0")
 required.data$PROPDMG.B <- required.data$PROPDMG.B * required.data$PROPDMG
 required.data$CROPDMG.B <- recode(as.character(required.data$CROPDMGEXP), "'K'=1e-6; 'M'=1e-3;'B'=1;''=0")
@@ -73,6 +101,5 @@ ggplot(event.cost.sub[1:5,], aes(x = factor(EVTYPE), y = total)) +
   geom_bar(stat = "identity") + 
   guides(fill = FALSE) + xlab("Weather Event") + ylab("Economic Impact (USD in Bilions)") +
   ggtitle("Economic Cost due to Severe Weather Events")
-
-
+```
 
